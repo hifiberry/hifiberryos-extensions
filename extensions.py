@@ -24,7 +24,7 @@ def extension_dir(extension_name):
 def active_file(extension):
     return extension_dir(extension)+"/is_active"
 
-def activate(extension, activate=True):
+def activate_extension(extension, activate=True):
     filename = active_file(extension)
 
     if activate:
@@ -39,6 +39,9 @@ def activate(extension, activate=True):
             os.remove(filename)
         except OSError as e:
             pass
+
+def is_activated(extension):
+    return os.path.exists(active_file(extension))
 
 
 def check_dockercompose(extension):
@@ -143,16 +146,22 @@ def update_extension(extension):
     link_beocreate_extension(extension)
 
 
-def start_extension(extension):
+def start_extension(extension, exit_on_fail=True, activate=True):
     check_extension_exists(extension)
     check_dockercompose(extension)
 
     cmd="docker-compose up -d"
     retcode, output = run_command_in_directory(cmd,extension_dir(extension))
     if (retcode):
-        print("failed to start docker containers")
-        print(output)
-        sys.exit(1)
+        print("failed to start docker containers for extension "+extension)
+        if exit_on_fail:
+            print(output)
+            sys.exit(1)
+
+    else:
+        if activate:
+            activate_extension(extension, True)
+
 
 
 def link_beocreate_extension(extension):
@@ -183,16 +192,21 @@ def unlink_beocreate_extension(extension):
                     print("couldn't unlink "+f+", ignoring")
        
 
-def stop_extension(extension):
+def stop_extension(extension, exit_on_fail=True, deactivate=True):
     check_dockercompose(extension)
     mydir = extension_dir(extension)
 
     cmd="docker-compose stop"
     retcode, output = run_command_in_directory(cmd,mydir)
     if (retcode):
-        print("failed to stop docker containers")
-        print(output)
-        sys.exit(1)
+        print("failed to stop docker containers for extension "+extension)
+        if exit_on_fail:
+            print(output)
+            sys.exit(1)
+
+    if deactivate:
+        activate_extension(extension, False)
+
 
 def is_docker_running(extension):
     cmd="docker-compose ls| wc -l"
@@ -219,26 +233,67 @@ def status(extension):
     else:
         print("not running")
 
+
+def start_all():
+    for extension in config:
+        if extension=="DEFAULT":
+            continue
+
+        if is_activated(extension):
+            start_extension(extension,exit_on_fail=False)
+
+
+def shutdown_all():
+    for extension in config:
+        if extension=="DEFAULT":
+            continue
+
+        stop_extension(extension,exit_on_fail=False, deactivate=False)
+
+def status_all():
+    for extension in config:
+        if extension=="DEFAULT":
+            continue
+
+        mydir = extension_dir(extension)
+        if not directory_exists(mydir):
+            state="not installed"
+        else:
+            if (is_docker_running(extension)):
+                state="running"
+            else:
+                state="not running"
+
+        print(extension,": ",state)
+        
+
 def run_command(args):
 
-    if args.extension not in config:
+    if args.extension is not None and args.extension not in config:
         print("extension "+args.extension+ " unknown")
         sys.exit(1)
 
     error = False
 
     if args.command == "status":
-        status(args.extension)
+        if (args.extension is not None):
+            status(args.extension)
+        else:
+            status_all()
     elif args.command == "install":
-        res = install_extension(args.extension)
+        install_extension(args.extension)
     elif args.command in ["uninstall","remove"]:
-        res = uninstall_extension(args.extension)
+        uninstall_extension(args.extension)
     elif args.command == "update":
-        res = update_extension(args.extension)
+        update_extension(args.extension)
     elif args.command == "start":
-        res = start_extension(args.extension)
+        start_extension(args.extension)
     elif args.command == "stop":
-        res = stop_extension(args.extension)
+        stop_extension(args.extension)
+    elif args.command == "startup":
+        start_all()
+    elif args.command == "shutdown":
+        shutdown_all()
 
     else:
         logging.error("Command "+args.command+" unknown.")
