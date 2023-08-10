@@ -10,6 +10,7 @@ import shutil
 import glob
 
 EXTENSION_DIR="/data/extensions"
+EXTENSIONDATA_DIR="/data/extensiondata"
 BEOCREATE_EXTENSION_DIR="/opt/beocreate/beo-extensions"
 
 CMD_STATUS="status"
@@ -88,6 +89,9 @@ def install_extension(extension):
         sys.exit(1)
 
     os.makedirs(mydir, exist_ok=True)
+    datadir=EXTENSIONDATA_DIR+"/"+extension
+    os.makedirs(datadir, exist_ok=True)
+    os.chown(datadir,2000,2000)
 
     cfg = config[extension]
     repo = cfg.get("repository")
@@ -264,7 +268,7 @@ def status_all():
             else:
                 state="not running"
 
-        print(extension,": ",state)
+        print(extension+": "+state)
         
 
 def run_command(args):
