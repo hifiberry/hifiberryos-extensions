@@ -238,6 +238,20 @@ def status(extension):
         print("not running")
 
 
+def running(extension):
+    mydir = extension_dir(extension)
+    if not directory_exists(mydir):
+        print("extension "+extension+ " does not exist")
+        sys.exit(1)
+
+    if (is_docker_running(extension)):
+        print("running")
+        sys.exit(0)
+    else:
+        print("not running")
+        sys.exit(1)
+
+
 def start_all():
     for extension in config:
         if extension=="DEFAULT":
@@ -284,6 +298,8 @@ def run_command(args):
             status(args.extension)
         else:
             status_all()
+    elif args.command == "running":
+        running(args.extension)
     elif args.command == "install":
         install_extension(args.extension)
     elif args.command in ["uninstall","remove"]:
