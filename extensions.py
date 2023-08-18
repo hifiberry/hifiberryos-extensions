@@ -283,6 +283,18 @@ def status_all():
                 state="not running"
 
         print(extension+": "+state)
+
+
+def link_all():
+    for extension in config:
+        if extension=="DEFAULT":
+            continue
+
+        mydir = extension_dir(extension)
+        if not directory_exists(mydir):
+            continue
+
+        link_beocreate_extension(extension)
         
 
 def run_command(args):
@@ -300,6 +312,8 @@ def run_command(args):
             status_all()
     elif args.command == "running":
         running(args.extension)
+    elif args.command == "link":
+        link_all()
     elif args.command == "install":
         install_extension(args.extension)
     elif args.command in ["uninstall","remove"]:
